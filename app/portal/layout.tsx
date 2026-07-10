@@ -1,0 +1,1 @@
+import type { ReactNode } from 'react'; import { PortalAccessProvider } from '@/components/PortalAccessProvider'; export default function PortalLayout({children}:{children:ReactNode}){return <PortalAccessProvider>{children}</PortalAccessProvider>}

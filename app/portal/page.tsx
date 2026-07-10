@@ -1,0 +1,1 @@
+import { PortalDashboardRouter } from '@/components/PortalDashboardRouter'; import { libraryConfig } from '@/lib/ngoConfig'; export default function Portal(){return <PortalDashboardRouter config={libraryConfig}/>}
