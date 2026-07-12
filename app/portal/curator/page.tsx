@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { PortalShell } from '@/components/PortalShell'
+import { BeamProcessLadder } from '@/components/BeamProcessLadder'
 import { db } from '@/lib/firebase'
 import { libraryConfig } from '@/lib/ngoConfig'
 import type { LibraryItem, LibraryItemStatus, MarketplaceListing } from '@/lib/types/libraryItem'
 import { useLibraryItems } from '@/lib/useLibraryItems'
+import { useBeamProcesses } from '@/lib/useBeamProcesses'
 
 const statuses: LibraryItemStatus[] = ['SUBMITTED', 'CATALOGED', 'DIGITIZED', 'DISPLAYED', 'ARCHIVED']
 
@@ -81,9 +83,21 @@ function CuratorItem({ item }: { item: LibraryItem }) {
 
 export default function Page() {
   const { items, loading, error } = useLibraryItems()
+  const { processes, loading: processesLoading, error: processesError } = useBeamProcesses()
   return (
     <PortalShell config={libraryConfig} title="Curation board" description="Move community works from intake through cataloging, digitization, display, and storage.">
       <style jsx global>{`@media print { body * { visibility: hidden !important; } .print-target, .print-target * { visibility: visible !important; } .print-target { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #000; background: #fff; } .print-target img { width: 220px; height: 220px; } .print-target .print-only { display: block !important; } }`}</style>
+      <section className="mb-8">
+        <div className="mb-4">
+          <p className="eyebrow">Shared work</p>
+          <h2 className="mt-2 text-2xl font-semibold">Partnerships &amp; Processes</h2>
+          <p className="mt-2 text-sm text-white/55">Track Library partnerships and their progress across the BEAM process.</p>
+        </div>
+        {processesLoading && <p className="text-sm text-white/60">Loading partnerships and processes…</p>}
+        {processesError && <p className="text-sm text-red-300">{processesError.message}</p>}
+        {!processesLoading && !processesError && processes.length === 0 && <p className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/50">No Library processes have been added yet.</p>}
+        <div className="grid gap-4 lg:grid-cols-2">{processes.map((process) => <BeamProcessLadder key={process.id} process={process} />)}</div>
+      </section>
       {loading && <p className="text-sm text-white/60">Loading collection…</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
       <div className="grid gap-4 xl:grid-cols-5">

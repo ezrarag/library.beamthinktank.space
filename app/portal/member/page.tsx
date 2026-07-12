@@ -9,6 +9,7 @@ import { db, storage } from '@/lib/firebase'
 import { libraryConfig } from '@/lib/ngoConfig'
 import type { LibraryItemMedium, MarketplaceListing } from '@/lib/types/libraryItem'
 import { useLibraryItems } from '@/lib/useLibraryItems'
+import { useCreatorProfiles } from '@/lib/useCreatorProfiles'
 
 const media: LibraryItemMedium[] = ['photography', 'craft', 'textile', 'writing', 'music', 'video', 'mixed', 'other']
 const fieldClass = 'mt-1 w-full rounded-2xl border border-white/10 bg-[#111a26] px-4 py-3 text-white outline-none focus:border-grounds-sand/50'
@@ -16,6 +17,8 @@ const fieldClass = 'mt-1 w-full rounded-2xl border border-white/10 bg-[#111a26] 
 export default function Page() {
   const { user } = usePortalAccessState()
   const { items, loading, error } = useLibraryItems()
+  const { profiles, loading: profilesLoading, error: profilesError } = useCreatorProfiles(user?.uid)
+  const accountHolderName = user?.displayName?.trim() || user?.email?.trim() || 'Myself'
   const [title, setTitle] = useState('')
   const [creatorName, setCreatorName] = useState('')
   const [medium, setMedium] = useState<LibraryItemMedium>('photography')
@@ -25,6 +28,9 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [newCreatorName, setNewCreatorName] = useState('')
+  const [isAddingCreator, setIsAddingCreator] = useState(false)
+  const [creatorMessage, setCreatorMessage] = useState<string | null>(null)
   const myItems = items.filter((item) => item.accountHolderUid === user?.uid)
 
   function clearForm() {
@@ -35,6 +41,31 @@ export default function Page() {
     setTeachingOffer('')
     setMarketplaceStatus('none')
     setFiles([])
+  }
+
+  async function handleAddCreator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setCreatorMessage(null)
+    if (!db) return setCreatorMessage('Firebase is not configured.')
+    if (!user) return setCreatorMessage('Sign in before adding a creator.')
+    const displayName = newCreatorName.trim()
+    if (!displayName) return setCreatorMessage('Creator name is required.')
+
+    setIsAddingCreator(true)
+    try {
+      const profileRef = doc(collection(db, 'creatorProfiles'))
+      await setDoc(profileRef, {
+        displayName,
+        guardianUid: user.uid,
+        createdAt: new Date().toISOString(),
+      })
+      setNewCreatorName('')
+      setCreatorMessage(`Added — ${displayName}`)
+    } catch (creatorError) {
+      setCreatorMessage(creatorError instanceof Error ? creatorError.message : 'Unable to add creator.')
+    } finally {
+      setIsAddingCreator(false)
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -100,11 +131,28 @@ export default function Page() {
           </div>
         </section>
 
+        <div className="grid gap-6">
+        <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <p className="text-sm font-medium text-white">My Creators</p>
+          <p className="mt-2 text-sm text-white/50">Choose yourself or link a young creator whose work you help steward.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-grounds-sand/30 bg-grounds-sand/10 px-3 py-1.5 text-sm text-grounds-sand">{accountHolderName} <span className="text-xs opacity-60">(myself)</span></span>
+            {profiles.map((profile) => <span key={profile.id} className="rounded-full border border-white/10 bg-black/10 px-3 py-1.5 text-sm text-white/75">{profile.displayName}</span>)}
+          </div>
+          {profilesLoading && <p className="mt-3 text-sm text-white/50">Loading creators…</p>}
+          {profilesError && <p className="mt-3 text-sm text-red-300">{profilesError}</p>}
+          <form onSubmit={handleAddCreator} className="mt-5 border-t border-white/10 pt-4">
+            <label className="block text-sm text-white/70">Add a young creator<input value={newCreatorName} onChange={(event) => setNewCreatorName(event.target.value)} placeholder="Display name" required className={fieldClass} /></label>
+            {creatorMessage && <p className="mt-3 text-sm text-white/65">{creatorMessage}</p>}
+            <button type="submit" disabled={isAddingCreator || !user} className="mt-3 rounded-full border border-grounds-sand/40 px-4 py-2 text-sm font-semibold text-grounds-sand disabled:opacity-40">{isAddingCreator ? 'Adding…' : 'Add creator'}</button>
+          </form>
+        </section>
+
         <form onSubmit={handleSubmit} className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
           <div className="flex items-center justify-between gap-3"><p className="text-sm font-medium text-white">Add a Work</p><button type="button" onClick={clearForm} className="text-sm font-medium text-grounds-sand hover:text-white">Clear</button></div>
           <div className="mt-4 grid gap-3">
             <label className="block text-sm text-white/70">Title<input value={title} onChange={(event) => setTitle(event.target.value)} required className={fieldClass} /></label>
-            <label className="block text-sm text-white/70">Creator name<input value={creatorName} onChange={(event) => setCreatorName(event.target.value)} required className={fieldClass} /></label>
+            <label className="block text-sm text-white/70">Creator<select value={creatorName} onChange={(event) => setCreatorName(event.target.value)} required className={fieldClass}><option value="">Select a creator</option><option value={accountHolderName}>{accountHolderName} (myself)</option>{profiles.map((profile) => <option key={profile.id} value={profile.displayName}>{profile.displayName}</option>)}</select></label>
             <label className="block text-sm text-white/70">Medium<select value={medium} onChange={(event) => setMedium(event.target.value as LibraryItemMedium)} className={fieldClass}>{media.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
             <label className="block text-sm text-white/70">Story<textarea value={story} onChange={(event) => setStory(event.target.value)} required rows={5} className={fieldClass} /></label>
             <label className="block text-sm text-white/70">Teaching offer <span className="text-white/40">(optional)</span><input value={teachingOffer} onChange={(event) => setTeachingOffer(event.target.value)} placeholder="Willing to teach crochet classes" className={fieldClass} /></label>
@@ -115,6 +163,7 @@ export default function Page() {
             <button type="submit" disabled={isSaving || !user} className="button mt-1 justify-center disabled:cursor-not-allowed disabled:opacity-50">{isSaving ? 'Submitting…' : 'Submit work'}</button>
           </div>
         </form>
+        </div>
       </div>
     </PortalShell>
   )

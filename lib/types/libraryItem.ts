@@ -18,6 +18,13 @@ export interface MarketplaceListing {
   notes?: string
 }
 
+export interface CreatorProfile {
+  id: string
+  displayName: string
+  guardianUid: string
+  createdAt: string
+}
+
 export interface LibraryItem {
   id: string
   title: string
