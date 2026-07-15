@@ -19,5 +19,5 @@ export function DirectSignInButton() {
     }
   }
 
-  return <div><button type="button" onClick={() => void handleSignIn()} disabled={isStarting} className="button disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="h-4 w-4" />{isStarting ? 'Opening Google…' : 'Sign in directly'}</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</div>
+  return <div><button type="button" onClick={handleSignIn} disabled={isStarting} className="button disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="h-4 w-4" />{isStarting ? 'Opening Google…' : 'Sign in directly'}</button>{error && <p className="mt-3 text-sm text-red-300">{error}</p>}</div>
 }
